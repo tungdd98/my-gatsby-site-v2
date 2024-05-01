@@ -1,5 +1,9 @@
 import type { GatsbyConfig } from 'gatsby';
 
+require('dotenv').config({
+  path: `.env.${process.env.NODE_ENV}`,
+});
+
 const config: GatsbyConfig = {
   siteMetadata: {
     title: `My Gatsby Site`,
@@ -13,7 +17,9 @@ const config: GatsbyConfig = {
     {
       resolve: 'gatsby-source-wordpress',
       options: {
-        url: process.env.WPGRAPHQL_URL || 'https://admin.demoweb.io.vn/graphql',
+        url:
+          process.env.WPGRAPHQL_URL ||
+          'https://wpgatsbydemo.wpengine.com/graphql',
       },
     },
     'gatsby-plugin-image',
