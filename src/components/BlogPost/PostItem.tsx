@@ -18,9 +18,6 @@ const PostItem: FC<PostItemProps> = ({ data }) => {
         </h2>
         <small className="text-xs text-slate-400">{data.date}</small>
       </header>
-      <section className="text-sm text-slate-500">
-        {parse(data.excerpt)}
-      </section>
     </article>
   );
 };

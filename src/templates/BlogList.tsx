@@ -2,7 +2,6 @@ import { Link, PageProps, graphql } from 'gatsby';
 import React, { FC } from 'react';
 import DefaultLayout from '../layouts/DefaultLayout';
 import Seo from '../components/Seo';
-import parse from 'html-react-parser';
 import { TPost } from '../types/post.type';
 import PostItem from '../components/BlogPost/PostItem';
 
@@ -17,7 +16,7 @@ type PageContextType = {
   previousPagePath: string;
 };
 
-const BlogPostArchive: FC<PageProps<DataProps, PageContextType>> = ({
+const BlogList: FC<PageProps<DataProps, PageContextType>> = ({
   data,
   pageContext: { previousPagePath, nextPagePath },
 }) => {
@@ -54,7 +53,7 @@ const BlogPostArchive: FC<PageProps<DataProps, PageContextType>> = ({
   );
 };
 
-export default BlogPostArchive;
+export default BlogList;
 
 export const pageQuery = graphql`
   query WordPressPostArchive($offset: Int!, $postsPerPage: Int!) {
@@ -62,6 +61,9 @@ export const pageQuery = graphql`
       sort: { fields: [date], order: DESC }
       limit: $postsPerPage
       skip: $offset
+      filter: {
+        categories: { nodes: { elemMatch: { name: { eq: "blogs" } } } }
+      }
     ) {
       nodes {
         excerpt

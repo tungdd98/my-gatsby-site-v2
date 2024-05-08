@@ -7,7 +7,7 @@ type TPost = {
   previous: {
     id: string;
   };
-  post: {
+  node: {
     id: string;
     uri: string;
   };
@@ -22,44 +22,6 @@ type TAllWpPost = {
   };
 };
 
-export const createPages: GatsbyNode['createPages'] = async (
-  gatsbyUtilities
-) => {
-  const posts = await getPosts(gatsbyUtilities);
-
-  if (!posts?.length) {
-    return;
-  }
-
-  await createIndividualBlogPostPages({ posts, gatsbyUtilities });
-
-  await createBlogPostArchive({ posts, gatsbyUtilities });
-};
-
-/**
- * This function creates all the individual blog pages in this site
- */
-const createIndividualBlogPostPages = async ({
-  posts,
-  gatsbyUtilities,
-}: {
-  posts: TPost[];
-  gatsbyUtilities: CreatePagesArgs;
-}) =>
-  Promise.all(
-    posts.map(({ previous, post, next }: any) =>
-      gatsbyUtilities.actions.createPage({
-        path: post.uri,
-        component: path.resolve(`./src/templates/BlogPost.tsx`),
-        context: {
-          id: post.id,
-          previousPostId: previous ? previous.id : null,
-          nextPostId: next ? next.id : null,
-        },
-      })
-    )
-  );
-
 type TReadingSettings = {
   wp: {
     readingSettings: {
@@ -68,14 +30,54 @@ type TReadingSettings = {
   };
 };
 
-/**
- * This function creates all the individual blog pages in this site
- */
-const createBlogPostArchive = async ({
-  posts,
+export const createPages: GatsbyNode['createPages'] = async (
+  gatsbyUtilities
+) => {
+  const blogs = await getBlogs(gatsbyUtilities);
+  const comics = await getComics(gatsbyUtilities);
+  const chapters = await getChapters(gatsbyUtilities);
+
+  if (blogs?.length) {
+    await createBlogDetailPages({ data: blogs, gatsbyUtilities });
+    await createBlogList({ data: blogs, gatsbyUtilities });
+  }
+
+  if (comics?.length) {
+    await createComicDetailPages({ data: comics, gatsbyUtilities });
+    await createComicList({ data: comics, gatsbyUtilities });
+  }
+
+  if (chapters?.length) {
+    await createChapterPages({ data: chapters, gatsbyUtilities });
+  }
+};
+
+const createBlogDetailPages = async ({
+  data,
   gatsbyUtilities,
 }: {
-  posts: TPost[];
+  data: TPost[];
+  gatsbyUtilities: CreatePagesArgs;
+}) =>
+  Promise.all(
+    data.map(({ previous, node, next }: any) =>
+      gatsbyUtilities.actions.createPage({
+        path: node.uri,
+        component: path.resolve(`./src/templates/BlogDetail.tsx`),
+        context: {
+          id: node.id,
+          previousPostId: previous ? previous.id : null,
+          nextPostId: next ? next.id : null,
+        },
+      })
+    )
+  );
+
+const createBlogList = async ({
+  data,
+  gatsbyUtilities,
+}: {
+  data: TPost[];
   gatsbyUtilities: CreatePagesArgs;
 }) => {
   const graphqlResult = await gatsbyUtilities.graphql<TReadingSettings>(
@@ -92,7 +94,7 @@ const createBlogPostArchive = async ({
 
   const postsPerPage = graphqlResult.data?.wp.readingSettings.postsPerPage ?? 1;
 
-  const postsChunkedIntoArchivePages = chunk(posts, postsPerPage);
+  const postsChunkedIntoArchivePages = chunk(data, postsPerPage);
   const totalPages = postsChunkedIntoArchivePages.length;
 
   return Promise.all(
@@ -109,7 +111,7 @@ const createBlogPostArchive = async ({
 
       gatsbyUtilities.actions.createPage({
         path: getPagePath(pageNumber),
-        component: path.resolve(`./src/templates/BlogPostArchive.tsx`),
+        component: path.resolve(`./src/templates/BlogList.tsx`),
         context: {
           offset: index * postsPerPage,
           postsPerPage,
@@ -121,23 +123,184 @@ const createBlogPostArchive = async ({
   );
 };
 
-const getPosts = async ({ graphql, reporter }: CreatePagesArgs) => {
+const createComicDetailPages = async ({
+  data,
+  gatsbyUtilities,
+}: {
+  data: TPost[];
+  gatsbyUtilities: CreatePagesArgs;
+}) =>
+  Promise.all(
+    data.map(({ previous, node, next }: any) =>
+      gatsbyUtilities.actions.createPage({
+        path: node.uri,
+        component: path.resolve(`./src/templates/ComicDetail.tsx`),
+        context: {
+          id: node.id,
+          previousPostId: previous ? previous.id : null,
+          nextPostId: next ? next.id : null,
+        },
+      })
+    )
+  );
+
+const createComicList = async ({
+  data,
+  gatsbyUtilities,
+}: {
+  data: TPost[];
+  gatsbyUtilities: CreatePagesArgs;
+}) => {
+  const graphqlResult = await gatsbyUtilities.graphql<TReadingSettings>(
+    /* GraphQL */ `
+      query WpSetting {
+        wp {
+          readingSettings {
+            postsPerPage
+          }
+        }
+      }
+    `
+  );
+
+  const postsPerPage = graphqlResult.data?.wp.readingSettings.postsPerPage ?? 1;
+
+  const postsChunkedIntoArchivePages = chunk(data, postsPerPage);
+  const totalPages = postsChunkedIntoArchivePages.length;
+
+  return Promise.all(
+    postsChunkedIntoArchivePages.map(async (_posts: any, index: number) => {
+      const pageNumber = index + 1;
+
+      const getPagePath = (page: number) => {
+        if (page > 0 && page <= totalPages) {
+          return page === 1 ? APP_ROUTE.COMICS : `/${APP_ROUTE.COMICS}/${page}`;
+        }
+
+        return '';
+      };
+
+      gatsbyUtilities.actions.createPage({
+        path: getPagePath(pageNumber),
+        component: path.resolve(`./src/templates/ComicList.tsx`),
+        context: {
+          offset: index * postsPerPage,
+          postsPerPage,
+          nextPagePath: getPagePath(pageNumber + 1),
+          previousPagePath: getPagePath(pageNumber - 1),
+        },
+      });
+    })
+  );
+};
+
+const createChapterPages = async ({
+  data,
+  gatsbyUtilities,
+}: {
+  data: TPost[];
+  gatsbyUtilities: CreatePagesArgs;
+}) =>
+  Promise.all(
+    data.map(({ previous, node, next }: any) =>
+      gatsbyUtilities.actions.createPage({
+        path: node.uri,
+        component: path.resolve(`./src/templates/Chapter.tsx`),
+        context: {
+          id: node.id,
+          previousPostId: previous ? previous.id : null,
+          nextPostId: next ? next.id : null,
+        },
+      })
+    )
+  );
+
+const getBlogs = async ({ graphql, reporter }: CreatePagesArgs) => {
   const graphqlResult = await graphql<TAllWpPost>(/* GraphQL */ `
-    query WpPosts {
-      # Query all WordPress blog posts sorted by date
-      allWpPost {
+    query WpBlogs {
+      allWpPost(
+        filter: {
+          categories: { nodes: { elemMatch: { name: { eq: "blogs" } } } }
+        }
+      ) {
         edges {
           previous {
             id
           }
-
-          # note: this is a GraphQL alias. It renames "node" to "post" for this query
-          # We're doing this because this "node" is a post! It makes our code more readable further down the line.
-          post: node {
+          node {
             id
             uri
           }
+          next {
+            id
+          }
+        }
+      }
+    }
+  `);
 
+  if (graphqlResult.errors) {
+    reporter.panicOnBuild(
+      `There was an error loading your blog posts`,
+      graphqlResult.errors
+    );
+    return;
+  }
+
+  return graphqlResult.data?.allWpPost.edges;
+};
+
+const getComics = async ({ graphql, reporter }: CreatePagesArgs) => {
+  const graphqlResult = await graphql<TAllWpPost>(/* GraphQL */ `
+    query WpComics {
+      allWpPost(
+        filter: {
+          categories: { nodes: { elemMatch: { name: { eq: "comics" } } } }
+        }
+      ) {
+        edges {
+          previous {
+            id
+          }
+          node {
+            id
+            uri
+          }
+          next {
+            id
+          }
+        }
+      }
+    }
+  `);
+
+  if (graphqlResult.errors) {
+    reporter.panicOnBuild(
+      `There was an error loading your blog posts`,
+      graphqlResult.errors
+    );
+    return;
+  }
+
+  return graphqlResult.data?.allWpPost.edges;
+};
+
+const getChapters = async ({ graphql, reporter }: CreatePagesArgs) => {
+  const graphqlResult = await graphql<TAllWpPost>(/* GraphQL */ `
+    query WpChapters {
+      allWpPost(
+        filter: {
+          categories: { nodes: { elemMatch: { name: { eq: "comic-detail" } } } }
+        }
+      ) {
+        edges {
+          previous {
+            id
+          }
+          node {
+            id
+            uri
+          }
           next {
             id
           }

@@ -33,7 +33,7 @@ type DataProps = {
   };
 };
 
-const BlogPost: FC<PageProps<DataProps>> = ({
+const Chapter: FC<PageProps<DataProps>> = ({
   data: { post, next, previous },
 }) => {
   const featuredImage = {
@@ -87,7 +87,7 @@ const BlogPost: FC<PageProps<DataProps>> = ({
   );
 };
 
-export default BlogPost;
+export default Chapter;
 
 export const pageQuery = graphql`
   query BlogPostById(
